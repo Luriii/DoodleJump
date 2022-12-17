@@ -65,12 +65,19 @@ class Player:
         dy = self.gravity
         for platform in platforms_group:
             if platform.rect.colliderect(self.rect.x, self.rect.y + dy, 60, 60):
-                if self.rect.bottom < platform.rect.centery:
-                    if self.gravity > 0:
-                        self.jump_sound.play()
-                        self.rect.bottom = platform.rect.top
-                        dy = 0
-                        self.gravity -= 30
+                if platform.type == 'Brown':
+                    image = pygame.image.load('./Pictures/Platforms/Broken.png').convert_alpha()
+                    if self.rect.bottom < platform.rect.centery:
+                        if self.gravity > 0:
+                            platform.image = pygame.transform.scale(image, (80, 20))
+
+                else:
+                    if self.rect.bottom < platform.rect.centery:
+                        if self.gravity > 0:
+                            self.jump_sound.play()
+                            self.rect.bottom = platform.rect.top
+                            dy = 0
+                            self.gravity -= 30
         s = 0 # s stands for scroll
         if self.rect.y <= 300:
             if self.gravity < 0:
@@ -126,10 +133,17 @@ class Platform(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
-        self.type = type # add platform type to
+        self.type = type
+        self.change_x = 1
 
     def update(self, scroll):
         self.rect.y += scroll
+        if self.type == 'Blue':
+            if self.rect.x >= 320 or self.rect.x <= 0:
+                self.change_x *= -1
+            self.rect.x += self.change_x
+        else:
+            pass
 
 
 class Obstacle(pygame.sprite.Sprite):
@@ -220,8 +234,10 @@ def floor_collision():
     global game_active
     if player.rect.y >= 750:
         game_active = False
+
+
 # updating platform group when the background moved up
-def update_platforms(scroll):
+def update_platforms():
     global platforms_group, platform_types, images
     for platform in platforms_group:
         if platform.rect.y >= 800:
@@ -291,7 +307,7 @@ while True:
         floor_collision()
         platforms_group.draw(screen)
         platforms_group.update(scroll)
-        update_platforms(scroll)
+        update_platforms()
         bullets.draw(screen)
         bullets.update()
 
