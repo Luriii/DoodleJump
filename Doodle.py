@@ -1,5 +1,6 @@
 import pygame, sys
 import random
+import numpy as np
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -91,15 +92,6 @@ class Player:
         if self.rect.y <= 400:
             if self.gravity < 0:
                 s = -self.gravity
-        # collision with booster
-        # global booster
-        # for booster in boosters:
-        #     if booster.rect.colliderect(self.rect.x, self.rect.y + dy, 60, 60):
-        #         with_rocket = pygame.image.load('with_rocket.png').convert_alpha()
-        #         rocketman = pygame.transform.scale(with_rocket, (60, 60))
-        #         self.image = rocketman
-        #         self.gravity -= 40
-        #         self.rocket_sound.play()
         return s
 
     def fire(self):
@@ -219,7 +211,7 @@ test_font = pygame.font.Font(None, 30)
 game_active = False
 start_time = 0
 score = 0
-max_platforms = 20
+max_platforms = 15
 # bg_music = pygame.mixer.Sound('audio/music.wav')
 # bg_music.play(loops=-1)
 
@@ -245,8 +237,6 @@ def floor_collision():
     global player
     global game_active
     if player.rect.y >= 750:
-        background_pos = 800
-
         game_active = False
 
 
@@ -255,23 +245,18 @@ def update_platforms():
     global platforms_group, platform_types, images
     for platform in platforms_group:
         if platform.rect.y >= 800:
-            type = random.randint(0, 2)
-            x = random.randint(0, 320)
-            y = (platform.rect.y - 800)
-            platform.rect.x = x
-            platform.rect.y = y
-            image_name = images[type]
-            platform_type = platform_types[type]
-            image = pygame.image.load(image_name).convert_alpha()
-            platform.image = pygame.transform.scale(image, (80, 20))
-            platform.type = platform_type
+            platform.kill()
+    if len(platforms_group) < max_platforms:
+        type = np.random.randint(0, 3, max_platforms)
+        x = np.random.randint(0, 320, max_platforms)
+        y = np.arange(-800, 0, 800 / max_platforms)
+        for i in range(1, len(type) - 1):
+            if type[i] == 2 and type[i] == type[i + 1] and type[i] == type[i - 1]:
+                type[i] = random.randint(0, 1)
+        for i in range(len(type)):
+            platforms_group.add(Platform(x[i], y[i], images[type[i]], platform_types[type[i]]))
 
 
-
-
-# Booster
-# boosters = pygame.sprite.Group()
-# boosters.add(Boosters(rocket_x, rocket_y - 30))
 # Background
 background_pos = 0
 background = pygame.image.load('background.png').convert()
@@ -301,16 +286,19 @@ while True:
                 player.score = 0
                 platforms_characteritics = []
                 platforms_group = pygame.sprite.Group()
-                for i in range(1, max_platforms):
-                    type = random.randint(0, 2)
-                    x = random.randint(0, 320)
-                    y = 800 / max_platforms * i
-                    platforms_characteritics.append([x, y, platform_types[type]])
+
+                type = np.random.randint(0, 3, 2 * max_platforms)
+                x = np.random.randint(0, 320, 2 * max_platforms)
+                y = np.arange(-800, 800, 1600/(2 * max_platforms))
+                type[0] = random.randint(0, 1)
+                type[1] = random.randint(0, 1)
+                for i in range(1, len(type) - 1):
+                    if type[i] == 2 and type[i] == type[i+1] and type[i] == type[i-1]:
+                        type[i] =random.randint(0, 1)
+                for i in range(len(type)):
+                    platforms_characteritics.append([x[i], y[i], platform_types[type[i]]])
                     './Pictures/Platforms/platform.png'
-                    platforms_group.add(Platform(x, y, images[type], platform_types[type]))
-                    if i == rocket_index:
-                        rocket_x = x
-                        rocket_y = y
+                    platforms_group.add(Platform(x[i], y[i], images[type[i]], platform_types[type[i]]))
                 game_active = True
 
 
@@ -331,7 +319,7 @@ while True:
         update_platforms()
         bullets.draw(screen)
         bullets.update()
-
+        print(len(platforms_group))
     else:
         screen.blit(background, (0, 0))
         screen.blit(doodle, doodle_rect)
