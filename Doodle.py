@@ -1,6 +1,7 @@
 import pygame
 import sys
 import random
+import numpy as np
 import time
 
 
@@ -37,6 +38,7 @@ class Player:
         self.jump_sound.set_volume(0.5)
         self.rocket_sound = pygame.mixer.Sound('rocket.mp3')
         self.rocket_sound.set_volume(0.5)
+        self.score = 0
         self.fire_timer = time.time()
 
     def move(self):
@@ -75,18 +77,19 @@ class Player:
                     if self.rect.bottom < platform.rect.centery:
                         if self.gravity > 0:
                             platform.image = pygame.transform.scale(image, (80, 20))
-                            platform.kill()
+
                             type = random.randint(0, 2)
                             x = random.randint(0, 320)
                             y = -800 / max_platforms
                             image_name = images[type]
                             platform_type = platform_types[type]
                             platforms_group.add(Platform(x, y, image_name, platform_type))
+                            platform.kill()
                 else:
                     if self.rect.bottom <= platform.rect.centery:
                         if self.gravity > 0:
                             self.jump_sound.play()
-                            self.rect.bottom = platform.rect.top
+                            # self.rect.bottom = platform.rect.top
                             dy = 0
                             self.gravity = -20
         # s stands for scroll
@@ -125,13 +128,15 @@ class Player:
         screen.blit(pygame.transform.scale(self.image, (60, 60)), (self.rect.x - 12, self.rect.y - 5))
         pygame.draw.rect(screen, (255, 255, 255), self.rect, -1)
 
-    def update(self):
+    def update(self, scroll):
         self.collisions()
         self.move()
         self.apply_gravity()
         self.fire()
         self.draw(screen)
-
+        self.rect.y += scroll
+        if self.score < self.score - self.gravity and self.gravity < 0:
+            self.score -= self.gravity
 
 class Boosters(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -212,11 +217,11 @@ def draw_background():
 
 
 def display_score():
-    current_time = int(pygame.time.get_ticks()/1000) - start_time
-    score_surf = test_font.render('Score: {}'.format(current_time), False, (0, 0, 0))
+    # current_time = int(pygame.time.get_ticks()/1000) - start_time
+    score_surf = test_font.render('Score: {}'.format(player.score), False, (0, 0, 0))
     score_rect = score_surf.get_rect(center=(350, 20))
     screen.blit(score_surf, score_rect)
-    return current_time
+    return player.score
 
 
 # Initial preset of a game
@@ -228,11 +233,16 @@ test_font = pygame.font.Font(None, 30)
 game_active = False
 start_time = 0
 score = 0
+
 max_platforms = 10
 bg_music = pygame.mixer.Sound('music.mp3')
 bg_music.play(loops=-1)
 bg_music.set_volume(0.5)
 
+
+#Screen
+HEIGHT = 800
+WIDTH = 320
 # Player
 player = Player()
 
@@ -271,17 +281,17 @@ def update_platforms():
     global platforms_group, platform_types, images
     for platform in platforms_group:
         if platform.rect.y >= 800:
-            type = random.randint(0, 2)
-            x = random.randint(0, 320)
-            y = -800 / max_platforms
-            platform.rect.x = x
-            platform.rect.y = y
-            image_name = images[type]
-            platform_type = platform_types[type]
-            image = pygame.image.load(image_name).convert_alpha()
-            platform.image = pygame.transform.scale(image, (80, 20))
-            platform.type = platform_type
-
+            platform.kill()
+    if len(platforms_group) < max_platforms:
+        type = np.random.randint(0, 3, max_platforms)
+        x = np.random.randint(0, 320, max_platforms)
+        y = np.arange(-800, 0, 800 / max_platforms)
+        for i in range(1, len(type) - 1):
+            if type[i] == 2 and type[i] == type[i + 1] and type[i] == type[i - 1]:
+                type[i] = random.randint(0, 1)
+        for i in range(len(type)):
+            platforms_group.add(Platform(x[i], y[i], images[type[i]], platform_types[type[i]]))
+            
 
 def spawn_monsters():
     global monsters, monster_types, monster_timer
@@ -320,28 +330,42 @@ while True:
             sys.exit()
         else:
             if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE and game_active == False:
+                player.score = 0
+                platforms_characteritics = []
                 platforms_group = pygame.sprite.Group()
                 rocket_index = random.randint(0, max_platforms)
-                for i in range(1, max_platforms):
-                    type = random.randint(0, 2)
-                    x = random.randint(0, 320)
-                    y = 800 / max_platforms * i
-                    platforms_group.add(Platform(x, y, images[type], platform_types[type]))
+
+                type = np.random.randint(0, 3, 2 * max_platforms)
+                x = np.random.randint(0, 320, 2 * max_platforms)
+                y = np.arange(-800, 800, 1600/(2 * max_platforms))
+                type[0] = random.randint(0, 1)
+                type[1] = random.randint(0, 1)
+                for i in range(1, len(type) - 1):
+                    if type[i] == 2 and type[i] == type[i+1] and type[i] == type[i-1]:
+                        type[i] =random.randint(0, 1)
+                for i in range(len(type)):
+                    platforms_characteritics.append([x[i], y[i], platform_types[type[i]]])
+                    './Pictures/Platforms/platform.png'
+                    platforms_group.add(Platform(x[i], y[i], images[type[i]], platform_types[type[i]]))
                     if i == rocket_index and type == 0:
-                        rocket_x = x
-                        rocket_y = y
+                        rocket_x = x[i]
+                        rocket_y = y[i]
                 game_active = True
+
 
     if game_active:
         draw_background()
-        if background_pos >= 800:
-            background_pos = 0
+        # if background_pos >= 800:
+        #     background_pos = 0
+        # background_pos += 10
+        # screen.blit(background, (0, 0))
         score = display_score()
         player.draw(screen)
-        scroll = player.collisions()
-        player.update()
-        floor_collision()
         platforms_group.draw(screen)
+        scroll = player.collisions()
+        player.update(scroll)
+        floor_collision()
+
         platforms_group.update(scroll)
         monsters.draw(screen)
         monsters.update()
@@ -351,7 +375,6 @@ while True:
         bullets.update()
         boosters.draw(screen)
         boosters.update()
-
     else:
         for bullet in bullets:
             bullet.kill()
