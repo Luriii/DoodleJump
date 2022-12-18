@@ -70,26 +70,25 @@ class Player:
                     if self.rect.bottom < platform.rect.centery:
                         if self.gravity > 0:
                             platform.image = pygame.transform.scale(image, (80, 20))
-
+                            platform.kill()
                             type = random.randint(0, 2)
                             x = random.randint(0, 320)
                             y = -800 / max_platforms
                             image_name = images[type]
                             platform_type = platform_types[type]
                             platforms_group.add(Platform(x, y, image_name, platform_type))
-                            platform.kill()
 
                 else:
                     if self.rect.bottom <= platform.rect.centery:
                         if self.gravity > 0:
                             self.jump_sound.play()
-                            # self.rect.bottom = platform.rect.top
+                            self.rect.bottom = platform.rect.top
                             dy = 0
-                            self.gravity = -22
+                            self.gravity = -20
         s = 0 # s stands for scroll
-        if self.rect.y <= 400:
+        if self.rect.y <= 500:
             if self.gravity < 0:
-                s = -self.gravity
+                s = -dy
         # collision with booster
         # global booster
         # for booster in boosters:
@@ -113,13 +112,13 @@ class Player:
         screen.blit(pygame.transform.scale(self.image, (60, 60)), (self.rect.x - 12, self.rect.y - 5))
         pygame.draw.rect(screen, (255, 255, 255), self.rect, 2)
 
-    def update(self, scroll):
+    def update(self):
         self.collisions()
         self.move()
         self.apply_gravity()
         self.fire()
         self.draw(screen)
-        self.rect.y += scroll
+
 
 class Boosters(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -195,6 +194,7 @@ class Obstacle(pygame.sprite.Sprite):
 def draw_background():
     screen.blit(background, (0, 0))
     screen.blit(background,  (0, 800))
+
 
 
 def display_score():
@@ -308,11 +308,10 @@ while True:
         # screen.blit(background, (0, 0))
         score = display_score()
         player.draw(screen)
-        platforms_group.draw(screen)
         scroll = player.collisions()
-        player.update(scroll)
+        player.update()
         floor_collision()
-
+        platforms_group.draw(screen)
         platforms_group.update(scroll)
         update_platforms()
         bullets.draw(screen)
