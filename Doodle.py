@@ -3,6 +3,7 @@ import sys
 import random
 import numpy as np
 import time
+import pickle
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -138,6 +139,7 @@ class Player:
         if self.score < self.score - self.gravity and self.gravity < 0:
             self.score -= self.gravity
 
+
 class Boosters(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
@@ -213,11 +215,11 @@ class Monster(pygame.sprite.Sprite):
 # create background
 def draw_background():
     screen.blit(background, (0, 0))
-    screen.blit(background,  (0, 800))
+    screen.blit(background, (0, 800))
 
 
-def display_score():
-    # current_time = int(pygame.time.get_ticks()/1000) - start_time
+def display_score(start=0):
+    player.score = int(pygame.time.get_ticks() / 1000) - start
     score_surf = test_font.render('Score: {}'.format(player.score), False, (0, 0, 0))
     score_rect = score_surf.get_rect(center=(350, 20))
     screen.blit(score_surf, score_rect)
@@ -225,49 +227,6 @@ def display_score():
 
 
 # Initial preset of a game
-pygame.init()
-screen = pygame.display.set_mode((400, 800))
-pygame.display.set_caption('Doodle_Jump')
-clock = pygame.time.Clock()
-test_font = pygame.font.Font(None, 30)
-game_active = False
-start_time = 0
-score = 0
-
-max_platforms = 10
-bg_music = pygame.mixer.Sound('music.mp3')
-bg_music.play(loops=-1)
-bg_music.set_volume(0.5)
-
-
-#Screen
-HEIGHT = 800
-WIDTH = 320
-# Player
-player = Player()
-
-# Bullets
-bullets = pygame.sprite.Group()
-
-# Starting platform
-platforms_group = pygame.sprite.Group()
-platform = platforms_group.add(Platform(150, 730, './Pictures/Platforms/platform.png', 'Green'))
-platform_types = ['Green', 'Blue', 'Brown']
-images = ['./Pictures/Platforms/platform.png',
-          './Pictures/Platforms/Blue.jpg',
-          './Pictures/Platforms/Brown.jpg']
-
-# Monsters
-monster_timer = time.time()
-monsters = pygame.sprite.Group()
-monster_types = ['OneEyed', 'LargeBlue', 'ButterFly']
-
-for i in range(1, max_platforms):
-    type = random.randint(0, 2)
-    x = random.randint(0, 320)
-    y = 600 / max_platforms * i
-    platforms_group.add(Platform(x, y, images[type], platform_types[type]))
-
 
 def floor_collision():
     global player
@@ -291,7 +250,7 @@ def update_platforms():
                 type[i] = random.randint(0, 1)
         for i in range(len(type)):
             platforms_group.add(Platform(x[i], y[i], images[type[i]], platform_types[type[i]]))
-            
+
 
 def spawn_monsters():
     global monsters, monster_types, monster_timer
@@ -303,92 +262,173 @@ def spawn_monsters():
         monsters.add(Monster(m_x, m_y, monster_types[m_type]))
 
 
-# Booster
-boosters = pygame.sprite.Group()
-# Background
-background_pos = 0
-background = pygame.image.load('background.png').convert()
+def catch_pause():
+    key = pygame.key.get_pressed()
+    global pause, game_active
+    if key[pygame.K_p]:
+        pause = True
+        game_active = False
 
-# Intro screen
-doodle = pygame.image.load('doodle_right.png').convert_alpha()
-doodle_rect = doodle.get_rect(midbottom=(200, 800))
 
-game_name = test_font.render('Doodle Jump', False, (0, 0, 0))
-game_name_rect = game_name.get_rect(center=(200, 450))
+def catch_continue():
+    key = pygame.key.get_pressed()
+    global pause, game_active
+    if key[pygame.K_c]:
+        pause = False
+        game_active = True
 
-game_message = test_font.render('Press space to jump', False, (0, 0, 0))
-message_space = game_message.get_rect(center=(200, 500))
-game_message_left = test_font.render('Press left arrow to move left', False, (0, 0, 0))
-message_left = game_message.get_rect(center=(150, 550))
-game_message_right = test_font.render('Press left arrow to move left', False, (0, 0, 0))
-message_right = game_message.get_rect(center=(150, 600))
 
-while True:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
+# def save():
+#     key = pygame.key.get_pressed()
+#     global player
+#     data = [player]
+#     if key[pygame.K_s]:
+#         with open("savegame", "wb") as f:
+#             for
+#             pickle.dump(data, f)
+
+
+if __name__ == "__main__":
+
+    pygame.init()
+    screen = pygame.display.set_mode((400, 800))
+    pygame.display.set_caption('Doodle_Jump')
+    clock = pygame.time.Clock()
+    test_font = pygame.font.Font(None, 30)
+    game_active = False
+    pause = False
+    start_time = 0
+    score = 0
+
+    max_platforms = 15
+    bg_music = pygame.mixer.Sound('music.mp3')
+    bg_music.play(loops=-1)
+    bg_music.set_volume(0.5)
+
+    # Screen
+    HEIGHT = 800
+    WIDTH = 320
+    # Player
+    player = Player()
+
+    # Bullets
+    bullets = pygame.sprite.Group()
+
+    # Starting platform
+    platforms_group = pygame.sprite.Group()
+    platform = platforms_group.add(Platform(150, 730, './Pictures/Platforms/platform.png', 'Green'))
+    platform_types = ['Green', 'Blue', 'Brown']
+    images = ['./Pictures/Platforms/platform.png',
+              './Pictures/Platforms/Blue.jpg',
+              './Pictures/Platforms/Brown.jpg']
+
+    # Monsters
+    monster_timer = time.time()
+    monsters = pygame.sprite.Group()
+    monster_types = ['OneEyed', 'LargeBlue', 'ButterFly']
+
+    for i in range(1, max_platforms):
+        type = random.randint(0, 2)
+        x = random.randint(0, 320)
+        y = 600 / max_platforms * i
+        platforms_group.add(Platform(x, y, images[type], platform_types[type]))
+
+    # Booster
+    boosters = pygame.sprite.Group()
+    # Background
+    background_pos = 0
+    background = pygame.image.load('background.png').convert()
+
+    # Intro screen
+    doodle = pygame.image.load('doodle_right.png').convert_alpha()
+    doodle_rect = doodle.get_rect(midbottom=(200, 800))
+
+    game_name = test_font.render('Doodle Jump', False, (0, 0, 0))
+    game_name_rect = game_name.get_rect(center=(200, 450))
+
+    game_message = test_font.render('Press space to jump', False, (0, 0, 0))
+    message_space = game_message.get_rect(center=(200, 500))
+    game_message_left = test_font.render('Press left arrow to move left', False, (0, 0, 0))
+    message_left = game_message.get_rect(center=(150, 550))
+    game_message_right = test_font.render('Press left arrow to move left', False, (0, 0, 0))
+    message_right = game_message.get_rect(center=(150, 600))
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            else:
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE and game_active == False and pause == False:
+                    player.score = 0
+                    score = 0
+                    start_time = int(pygame.time.get_ticks() / 1000)
+                    platforms_characteritics = []
+                    platforms_group = pygame.sprite.Group()
+                    rocket_index = random.randint(0, max_platforms)
+
+                    type = np.random.randint(0, 3, 2 * max_platforms)
+                    x = np.random.randint(0, 320, 2 * max_platforms)
+                    y = np.arange(-800, 800, 1600 / (2 * max_platforms))
+                    type[0] = random.randint(0, 1)
+                    type[1] = random.randint(0, 1)
+                    for i in range(1, len(type) - 1):
+                        if type[i] == 2 and type[i] == type[i + 1] and type[i] == type[i - 1]:
+                            type[i] = random.randint(0, 1)
+                    for i in range(len(type)):
+                        platforms_characteritics.append([x[i], y[i], platform_types[type[i]]])
+                        './Pictures/Platforms/platform.png'
+                        platforms_group.add(Platform(x[i], y[i], images[type[i]], platform_types[type[i]]))
+                        if i == rocket_index and type[i] == 0:
+                            rocket_x = x[i]
+                            rocket_y = y[i]
+                    game_active = True
+
+        if game_active and pause == False:
+            draw_background()
+            # if background_pos >= 800:
+            #     background_pos = 0
+            # background_pos += 10
+            # screen.blit(background, (0, 0))
+            score = display_score(start_time)
+            player.draw(screen)
+            platforms_group.draw(screen)
+            scroll = player.collisions()
+            player.update(scroll)
+            floor_collision()
+
+            platforms_group.update(scroll)
+            monsters.draw(screen)
+            monsters.update()
+            update_platforms()
+            spawn_monsters()
+            bullets.draw(screen)
+            bullets.update()
+            boosters.draw(screen)
+            boosters.update()
+            catch_pause()
         else:
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE and game_active == False:
-                player.score = 0
-                platforms_characteritics = []
-                platforms_group = pygame.sprite.Group()
-                rocket_index = random.randint(0, max_platforms)
+            for bullet in bullets:
+                bullet.kill()
+            screen.blit(background, (0, 0))
+            screen.blit(doodle, doodle_rect)
+            if score == 0:
+                screen.blit(game_name, game_name_rect)
+                screen.blit(game_message, message_space)
+                screen.blit(game_message_left, message_left)
+                screen.blit(game_message_right, message_right)
+            else:
+                score_message = test_font.render('Your score: {}'.format(score), False, (0, 0, 0))
+                score_message_rect = score_message.get_rect(center=(200, 375))
+                screen.blit(score_message, score_message_rect)
+                save_message = test_font.render('Press s to save score', False, (0, 0, 0))
+                save_message_rect = save_message.get_rect(center=(200, 475))
+                screen.blit(save_message, save_message_rect)
+                if pause:
+                    pause_message = test_font.render('Press c to continue', False, (0, 0, 0))
+                    pause_message_rect = pause_message.get_rect(center=(200, 275))
+                    screen.blit(pause_message, pause_message_rect)
+                    catch_continue()
 
-                type = np.random.randint(0, 3, 2 * max_platforms)
-                x = np.random.randint(0, 320, 2 * max_platforms)
-                y = np.arange(-800, 800, 1600/(2 * max_platforms))
-                type[0] = random.randint(0, 1)
-                type[1] = random.randint(0, 1)
-                for i in range(1, len(type) - 1):
-                    if type[i] == 2 and type[i] == type[i+1] and type[i] == type[i-1]:
-                        type[i] =random.randint(0, 1)
-                for i in range(len(type)):
-                    platforms_characteritics.append([x[i], y[i], platform_types[type[i]]])
-                    './Pictures/Platforms/platform.png'
-                    platforms_group.add(Platform(x[i], y[i], images[type[i]], platform_types[type[i]]))
-                    if i == rocket_index and type == 0:
-                        rocket_x = x[i]
-                        rocket_y = y[i]
-                game_active = True
-
-
-    if game_active:
-        draw_background()
-        # if background_pos >= 800:
-        #     background_pos = 0
-        # background_pos += 10
-        # screen.blit(background, (0, 0))
-        score = display_score()
-        player.draw(screen)
-        platforms_group.draw(screen)
-        scroll = player.collisions()
-        player.update(scroll)
-        floor_collision()
-
-        platforms_group.update(scroll)
-        monsters.draw(screen)
-        monsters.update()
-        update_platforms()
-        spawn_monsters()
-        bullets.draw(screen)
-        bullets.update()
-        boosters.draw(screen)
-        boosters.update()
-    else:
-        for bullet in bullets:
-            bullet.kill()
-        screen.blit(background, (0, 0))
-        screen.blit(doodle, doodle_rect)
-        if score == 0:
-            screen.blit(game_name, game_name_rect)
-            screen.blit(game_message, message_space)
-            screen.blit(game_message_left, message_left)
-            screen.blit(game_message_right, message_right)
-        else:
-            score_message = test_font.render('Your score: {}'.format(score), False, (0, 0, 0))
-            score_message_rect = score_message.get_rect(center=(200, 375))
-            screen.blit(score_message, score_message_rect)
-
-    pygame.display.update()
-    clock.tick(60)
+        pygame.display.update()
+        clock.tick(60)
