@@ -78,7 +78,7 @@ class Player:
                             self.rect.bottom = platform.rect.top
                             dy = 0
                             self.gravity -= 30
-        s = 0 # s stands for scroll
+        s = 0  # s stands for scroll
         if self.rect.y <= 300:
             if self.gravity < 0:
                 s -= dy
@@ -183,15 +183,14 @@ class Obstacle(pygame.sprite.Sprite):
             self.kill()
 
 
-#create background
+# create background
 def draw_background():
     screen.blit(background, (0, 0))
-    screen.blit(background,  (0, 800))
-
+    screen.blit(background, (0, 800))
 
 
 def display_score():
-    current_time = int(pygame.time.get_ticks()/1000) - start_time
+    current_time = int(pygame.time.get_ticks() / 1000) - start_time
     score_surf = test_font.render('Score: {}'.format(current_time), False, (0, 0, 0))
     score_rect = score_surf.get_rect(center=(350, 20))
     screen.blit(score_surf, score_rect)
@@ -256,7 +255,7 @@ def update_platforms():
 for i in range(1, max_platforms):
     type = random.randint(0, 2)
     x = random.randint(0, 320)
-    y = 800/max_platforms * i
+    y = 800 / max_platforms * i
     './Pictures/Platforms/platform.png'
     platforms_group.add(Platform(x, y, images[type], platform_types[type]))
     if i == rocket_index:
@@ -291,6 +290,7 @@ while True:
             sys.exit()
         else:
             if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                start_time = int(pygame.time.get_ticks() / 1000)
                 game_active = True
 
     if game_active:
@@ -303,7 +303,7 @@ while True:
         player.draw(screen)
         scroll = player.collisions()
         player.update()
-        print(player.rect.y)
+        # print(player.rect.y)
         floor_collision()
         platforms_group.draw(screen)
         platforms_group.update(scroll)
