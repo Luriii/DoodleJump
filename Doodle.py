@@ -1,6 +1,8 @@
-import pygame, sys
+import pygame
+import sys
 import random
 import numpy as np
+import time
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -14,6 +16,8 @@ class Bullet(pygame.sprite.Sprite):
 
     def update(self):
         self.rect.y -= 5
+        if self.rect.y == 0:
+            self.kill()
 
 
 class Player:
@@ -35,6 +39,7 @@ class Player:
         self.rocket_sound = pygame.mixer.Sound('rocket.mp3')
         self.rocket_sound.set_volume(0.5)
         self.score = 0
+        self.fire_timer = time.time()
 
     def move(self):
         key = pygame.key.get_pressed()
@@ -80,18 +85,33 @@ class Player:
                             platform_type = platform_types[type]
                             platforms_group.add(Platform(x, y, image_name, platform_type))
                             platform.kill()
-
                 else:
                     if self.rect.bottom <= platform.rect.centery:
                         if self.gravity > 0:
                             self.jump_sound.play()
                             # self.rect.bottom = platform.rect.top
                             dy = 0
-                            self.gravity = -22
-        s = 0 # s stands for scroll
-        if self.rect.y <= 400:
+                            self.gravity = -20
+        # s stands for scroll
+        s = 0
+        if self.rect.y <= 500:
             if self.gravity < 0:
-                s = -self.gravity
+                s = -dy
+        # collision with booster
+        rocket_start = time.time()
+        global booster
+        for booster in boosters:
+            if booster.rect.colliderect(self.rect.x, self.rect.y + dy, 60, 60):
+                with_rocket = pygame.image.load('with_rocket.png').convert_alpha()
+                self.image = pygame.transform.scale(with_rocket, (60, 60))
+                self.gravity -= 40
+                rocket_start = time.time()
+                self.rocket_sound.play()
+                booster.kill()
+                # check if there is enough fuel to fly
+        if time.time() - rocket_start > 5:
+            self.image = self.player_pos[0]
+        # return scroll variable to update screen
         return s
 
     def fire(self):
@@ -100,11 +120,13 @@ class Player:
         # movement
         if key[pygame.K_UP]:
             self.image = self.player_pos[2]
-            bullets.add(Bullet(self.rect.x, self.rect.y + 5, 'bullet.png'))
+            if time.time() - self.fire_timer > 0.5:
+                self.fire_timer = time.time()
+                bullets.add(Bullet(self.rect.x, self.rect.y + 5, 'bullet.png'))
 
     def draw(self, screen):
         screen.blit(pygame.transform.scale(self.image, (60, 60)), (self.rect.x - 12, self.rect.y - 5))
-        pygame.draw.rect(screen, (255, 255, 255), self.rect, 2)
+        pygame.draw.rect(screen, (255, 255, 255), self.rect, -1)
 
     def update(self, scroll):
         self.collisions()
@@ -128,7 +150,7 @@ class Boosters(pygame.sprite.Sprite):
 
 
 class Platform(pygame.sprite.Sprite):
-    # 3 platform types: state(green), moving (blue), destructive (brown)
+    # 3 platform types: static (green), moving (blue), broken (brown)
     def __init__(self, x, y, image_name, type):
         super().__init__()
         image = pygame.image.load(image_name).convert_alpha()
@@ -149,49 +171,49 @@ class Platform(pygame.sprite.Sprite):
             pass
 
 
-
-class Obstacle(pygame.sprite.Sprite):
-    def __init__(self, type):
+class Monster(pygame.sprite.Sprite):
+    def __init__(self, x, y, type):
         super().__init__()
-
         if type == 'OneEyed':
             monster_1 = pygame.image.load('Pictures/OneEyed.png').convert_alpha()
-            self.frames = [monster_1]
-            y_pos = 210
-        elif type == 'Large Blue':
+            self.image = pygame.transform.scale(monster_1, (80, 80))
+        elif type == 'LargeBlue':
             monster_2 = pygame.image.load('Pictures/Large Blue Monster.png').convert_alpha()
-            self.frames = [monster_2]
-            y_pos = 210
-        else:
+            self.image = pygame.transform.scale(monster_2, (80, 80))
+        elif type == 'ButterFly':
             monster_3 = pygame.image.load('Pictures/Butterfly.png').convert_alpha()
-            self.frames = [monster_3]
-            y_pos = 300
+            self.image = pygame.transform.scale(monster_3, (80, 80))
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        # for movement
+        self.pos_change = 0
+        self.dx = 1
 
-        self.animation_index = 0
-        self.image = self.frames[self.animation_index]
-        self.rect = self.image.get_rect(midbottom=(random.randint(900, 1100), y_pos))
+    # check for a collision with bullets
+    def dodging_from_bullets(self):
+        global bullets
+        for bullet in bullets:
+            if bullet.rect.colliderect(self.rect.x, self.rect.y, 80, 80):
+                self.kill()
 
-    def animation_state(self):
-        self.animation_index += 0.1
-        if self.animation_index >= len(self.frames):
-            self.animation_index = 0
-        self.image = self.frames[int(self.animation_index)]
+    def move(self):
+        if self.pos_change < 40:
+            self.rect.x += self.dx
+            self.pos_change += 1
+        else:
+            self.dx = -self.dx
+            self.pos_change = 0
 
     def update(self):
-        self.animation_state()
-        self.rect.x -= 6
-        self.destroy()
-
-    def destroy(self):
-        if self.rect.x <= -100:
-            self.kill()
+        self.move()
+        self.dodging_from_bullets()
 
 
-#create background
+# create background
 def draw_background():
     screen.blit(background, (0, 0))
     screen.blit(background,  (0, 800))
-
 
 
 def display_score():
@@ -211,9 +233,12 @@ test_font = pygame.font.Font(None, 30)
 game_active = False
 start_time = 0
 score = 0
-max_platforms = 15
-# bg_music = pygame.mixer.Sound('audio/music.wav')
-# bg_music.play(loops=-1)
+
+max_platforms = 10
+bg_music = pygame.mixer.Sound('music.mp3')
+bg_music.play(loops=-1)
+bg_music.set_volume(0.5)
+
 
 #Screen
 HEIGHT = 800
@@ -225,12 +250,23 @@ player = Player()
 bullets = pygame.sprite.Group()
 
 # Starting platform
+platforms_group = pygame.sprite.Group()
+platform = platforms_group.add(Platform(150, 730, './Pictures/Platforms/platform.png', 'Green'))
 platform_types = ['Green', 'Blue', 'Brown']
 images = ['./Pictures/Platforms/platform.png',
           './Pictures/Platforms/Blue.jpg',
           './Pictures/Platforms/Brown.jpg']
 
-rocket_index = random.randint(0, 9)
+# Monsters
+monster_timer = time.time()
+monsters = pygame.sprite.Group()
+monster_types = ['OneEyed', 'LargeBlue', 'ButterFly']
+
+for i in range(1, max_platforms):
+    type = random.randint(0, 2)
+    x = random.randint(0, 320)
+    y = 600 / max_platforms * i
+    platforms_group.add(Platform(x, y, images[type], platform_types[type]))
 
 
 def floor_collision():
@@ -255,8 +291,20 @@ def update_platforms():
                 type[i] = random.randint(0, 1)
         for i in range(len(type)):
             platforms_group.add(Platform(x[i], y[i], images[type[i]], platform_types[type[i]]))
+            
+
+def spawn_monsters():
+    global monsters, monster_types, monster_timer
+    if time.time() - monster_timer > 30:
+        monster_timer = time.time()
+        m_type = random.randint(0, 2)
+        m_x = random.randint(0, 320)
+        m_y = random.randint(0, 700)
+        monsters.add(Monster(m_x, m_y, monster_types[m_type]))
 
 
+# Booster
+boosters = pygame.sprite.Group()
 # Background
 background_pos = 0
 background = pygame.image.load('background.png').convert()
@@ -276,7 +324,6 @@ game_message_right = test_font.render('Press left arrow to move left', False, (0
 message_right = game_message.get_rect(center=(150, 600))
 
 while True:
-
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
@@ -286,6 +333,7 @@ while True:
                 player.score = 0
                 platforms_characteritics = []
                 platforms_group = pygame.sprite.Group()
+                rocket_index = random.randint(0, max_platforms)
 
                 type = np.random.randint(0, 3, 2 * max_platforms)
                 x = np.random.randint(0, 320, 2 * max_platforms)
@@ -299,6 +347,9 @@ while True:
                     platforms_characteritics.append([x[i], y[i], platform_types[type[i]]])
                     './Pictures/Platforms/platform.png'
                     platforms_group.add(Platform(x[i], y[i], images[type[i]], platform_types[type[i]]))
+                    if i == rocket_index and type == 0:
+                        rocket_x = x[i]
+                        rocket_y = y[i]
                 game_active = True
 
 
@@ -316,11 +367,17 @@ while True:
         floor_collision()
 
         platforms_group.update(scroll)
+        monsters.draw(screen)
+        monsters.update()
         update_platforms()
+        spawn_monsters()
         bullets.draw(screen)
         bullets.update()
-        print(len(platforms_group))
+        boosters.draw(screen)
+        boosters.update()
     else:
+        for bullet in bullets:
+            bullet.kill()
         screen.blit(background, (0, 0))
         screen.blit(doodle, doodle_rect)
         if score == 0:
