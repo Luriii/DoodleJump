@@ -70,27 +70,34 @@ class Player:
                     if self.rect.bottom < platform.rect.centery:
                         if self.gravity > 0:
                             platform.image = pygame.transform.scale(image, (80, 20))
+                            platform.kill()
+                            type = random.randint(0, 2)
+                            x = random.randint(0, 320)
+                            y = -800 / max_platforms
+                            image_name = images[type]
+                            platform_type = platform_types[type]
+                            platforms_group.add(Platform(x, y, image_name, platform_type))
 
                 else:
-                    if self.rect.bottom < platform.rect.centery:
+                    if self.rect.bottom <= platform.rect.centery:
                         if self.gravity > 0:
                             self.jump_sound.play()
                             self.rect.bottom = platform.rect.top
                             dy = 0
-                            self.gravity -= 30
+                            self.gravity = -20
         s = 0 # s stands for scroll
-        if self.rect.y <= 300:
+        if self.rect.y <= 500:
             if self.gravity < 0:
-                s -= dy
+                s = -dy
         # collision with booster
-        global booster
-        for booster in boosters:
-            if booster.rect.colliderect(self.rect.x, self.rect.y + dy, 60, 60):
-                with_rocket = pygame.image.load('with_rocket.png').convert_alpha()
-                rocketman = pygame.transform.scale(with_rocket, (60, 60))
-                self.image = rocketman
-                self.gravity -= 40
-                self.rocket_sound.play()
+        # global booster
+        # for booster in boosters:
+        #     if booster.rect.colliderect(self.rect.x, self.rect.y + dy, 60, 60):
+        #         with_rocket = pygame.image.load('with_rocket.png').convert_alpha()
+        #         rocketman = pygame.transform.scale(with_rocket, (60, 60))
+        #         self.image = rocketman
+        #         self.gravity -= 40
+        #         self.rocket_sound.play()
         return s
 
     def fire(self):
@@ -303,7 +310,6 @@ while True:
         player.draw(screen)
         scroll = player.collisions()
         player.update()
-        print(player.rect.y)
         floor_collision()
         platforms_group.draw(screen)
         platforms_group.update(scroll)
