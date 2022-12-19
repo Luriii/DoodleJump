@@ -288,7 +288,6 @@ def catch_save():
         saved_message = test_font.render('Saved', False, (0, 0, 0))
         saved_message_rect = saved_message.get_rect(center=(200, 150))
         screen.blit(saved_message, saved_message_rect)
-        
 
 def load():
     global game_active
