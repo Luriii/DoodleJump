@@ -278,14 +278,24 @@ def catch_continue():
         game_active = True
 
 
-# def save():
-#     key = pygame.key.get_pressed()
-#     global player
-#     data = [player]
-#     if key[pygame.K_s]:
-#         with open("savegame", "wb") as f:
-#             for
-#             pickle.dump(data, f)
+def catch_save():
+    key = pygame.key.get_pressed()
+    global player, game_active
+    if key[pygame.K_s]:
+        data = player.score
+        with open("savegame", "wb") as f:
+            pickle.dump(data, f)
+        saved_message = test_font.render('Saved', False, (0, 0, 0))
+        saved_message_rect = saved_message.get_rect(center=(200, 150))
+        screen.blit(saved_message, saved_message_rect)
+        
+
+def load():
+    global game_active
+    with open('savegame', "rb") as f:
+        data = pickle.load(f)
+    game_active = True
+    return data
 
 
 if __name__ == "__main__":
@@ -344,14 +354,20 @@ if __name__ == "__main__":
     doodle_rect = doodle.get_rect(midbottom=(200, 800))
 
     game_name = test_font.render('Doodle Jump', False, (0, 0, 0))
-    game_name_rect = game_name.get_rect(center=(200, 450))
+    game_name_rect = game_name.get_rect(center=(200, 150))
 
     game_message = test_font.render('Press space to jump', False, (0, 0, 0))
-    message_space = game_message.get_rect(center=(200, 500))
+    message_space = game_message.get_rect(center=(200, 450))
     game_message_left = test_font.render('Press left arrow to move left', False, (0, 0, 0))
-    message_left = game_message.get_rect(center=(150, 550))
+    message_left = game_message.get_rect(center=(150, 500))
     game_message_right = test_font.render('Press left arrow to move left', False, (0, 0, 0))
-    message_right = game_message.get_rect(center=(150, 600))
+    message_right = game_message.get_rect(center=(150, 550))
+    # game_message_save = test_font.render('Press s to save', False, (0, 0, 0))
+    # message_save = game_message.get_rect(center=(200, 300))
+    game_message_load = test_font.render('Press l to load last saved game', False, (0, 0, 0))
+    message_load = game_message.get_rect(center=(150, 350))
+    game_message_pause = test_font.render('Press p to pause', False, (0, 0, 0))
+    message_pause = game_message.get_rect(center=(200, 400))
 
     while True:
         for event in pygame.event.get():
@@ -383,13 +399,32 @@ if __name__ == "__main__":
                             rocket_x = x[i]
                             rocket_y = y[i]
                     game_active = True
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_l and game_active == False and pause == False:
+                    player.score = load()
+                    score = player.score
+                    start_time = player.score
+                    platforms_characteritics = []
+                    platforms_group = pygame.sprite.Group()
+                    rocket_index = random.randint(0, max_platforms)
 
+                    type = np.random.randint(0, 3, 2 * max_platforms)
+                    x = np.random.randint(0, 320, 2 * max_platforms)
+                    y = np.arange(-800, 800, 1600 / (2 * max_platforms))
+                    type[0] = random.randint(0, 1)
+                    type[1] = random.randint(0, 1)
+                    for i in range(1, len(type) - 1):
+                        if type[i] == 2 and type[i] == type[i + 1] and type[i] == type[i - 1]:
+                            type[i] = random.randint(0, 1)
+                    for i in range(len(type)):
+                        platforms_characteritics.append([x[i], y[i], platform_types[type[i]]])
+                        './Pictures/Platforms/platform.png'
+                        platforms_group.add(Platform(x[i], y[i], images[type[i]], platform_types[type[i]]))
+                        if i == rocket_index and type[i] == 0:
+                            rocket_x = x[i]
+                            rocket_y = y[i]
+                    game_active = True
         if game_active and pause == False:
             draw_background()
-            # if background_pos >= 800:
-            #     background_pos = 0
-            # background_pos += 10
-            # screen.blit(background, (0, 0))
             score = display_score(start_time)
             player.draw(screen)
             platforms_group.draw(screen)
@@ -417,6 +452,9 @@ if __name__ == "__main__":
                 screen.blit(game_message, message_space)
                 screen.blit(game_message_left, message_left)
                 screen.blit(game_message_right, message_right)
+                screen.blit(game_message_load, message_load)
+                # screen.blit(game_message_save, message_save)
+                screen.blit(game_message_pause, message_pause)
             else:
                 score_message = test_font.render('Your score: {}'.format(score), False, (0, 0, 0))
                 score_message_rect = score_message.get_rect(center=(200, 375))
@@ -424,6 +462,7 @@ if __name__ == "__main__":
                 save_message = test_font.render('Press s to save score', False, (0, 0, 0))
                 save_message_rect = save_message.get_rect(center=(200, 475))
                 screen.blit(save_message, save_message_rect)
+                catch_save()
                 if pause:
                     pause_message = test_font.render('Press c to continue', False, (0, 0, 0))
                     pause_message_rect = pause_message.get_rect(center=(200, 275))
