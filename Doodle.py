@@ -218,8 +218,10 @@ def draw_background():
     screen.blit(background, (0, 800))
 
 
-def display_score(start=0):
-    player.score = int(pygame.time.get_ticks() / 1000) - start
+def display_score():
+    # global stop_time
+    # player.score = int(pygame.time.get_ticks() / 1000) - start - stop_time
+    player.score += player.collisions()
     score_surf = test_font.render('Score: {}'.format(player.score), False, (0, 0, 0))
     score_rect = score_surf.get_rect(center=(350, 20))
     screen.blit(score_surf, score_rect)
@@ -272,28 +274,30 @@ def catch_pause():
 
 def catch_continue():
     key = pygame.key.get_pressed()
-    global pause, game_active
+    global pause, game_active, saved, loaded
     if key[pygame.K_c]:
         pause = False
         game_active = True
+        saved = False
+        loaded = False
 
 
 def catch_save():
     key = pygame.key.get_pressed()
-    global player, game_active
+    global player, saved
     if key[pygame.K_s]:
         data = player.score
         with open("savegame", "wb") as f:
             pickle.dump(data, f)
-        saved_message = test_font.render('Saved', False, (0, 0, 0))
-        saved_message_rect = saved_message.get_rect(center=(200, 150))
-        screen.blit(saved_message, saved_message_rect)
+        saved = True
+
 
 def load():
-    global game_active
+    global game_active, loaded
     with open('savegame', "rb") as f:
         data = pickle.load(f)
-    game_active = True
+    # game_active = True
+    loaded = True
     return data
 
 
@@ -306,7 +310,10 @@ if __name__ == "__main__":
     test_font = pygame.font.Font(None, 30)
     game_active = False
     pause = False
+    loaded = False
+    saved = False
     start_time = 0
+    scroll = 0
     score = 0
 
     max_platforms = 15
@@ -374,34 +381,16 @@ if __name__ == "__main__":
                 pygame.quit()
                 sys.exit()
             else:
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE and game_active == False and pause == False:
-                    player.score = 0
-                    score = 0
-                    start_time = int(pygame.time.get_ticks() / 1000)
-                    platforms_characteritics = []
-                    platforms_group = pygame.sprite.Group()
-                    rocket_index = random.randint(0, max_platforms)
-
-                    type = np.random.randint(0, 3, 2 * max_platforms)
-                    x = np.random.randint(0, 320, 2 * max_platforms)
-                    y = np.arange(-800, 800, 1600 / (2 * max_platforms))
-                    type[0] = random.randint(0, 1)
-                    type[1] = random.randint(0, 1)
-                    for i in range(1, len(type) - 1):
-                        if type[i] == 2 and type[i] == type[i + 1] and type[i] == type[i - 1]:
-                            type[i] = random.randint(0, 1)
-                    for i in range(len(type)):
-                        platforms_characteritics.append([x[i], y[i], platform_types[type[i]]])
-                        './Pictures/Platforms/platform.png'
-                        platforms_group.add(Platform(x[i], y[i], images[type[i]], platform_types[type[i]]))
-                        if i == rocket_index and type[i] == 0:
-                            rocket_x = x[i]
-                            rocket_y = y[i]
-                    game_active = True
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_l and game_active == False and pause == False:
                     player.score = load()
                     score = player.score
-                    start_time = player.score
+                    # start_time = -score
+                    loaded = True
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE and game_active == False and pause == False:
+                    if not loaded:
+                        player.score = 0
+                        score = 0
+                        start_time = int(pygame.time.get_ticks() / 1000)
                     platforms_characteritics = []
                     platforms_group = pygame.sprite.Group()
                     rocket_index = random.randint(0, max_platforms)
@@ -421,10 +410,14 @@ if __name__ == "__main__":
                         if i == rocket_index and type[i] == 0:
                             rocket_x = x[i]
                             rocket_y = y[i]
+                    # clock.tick(60)
                     game_active = True
+                    saved = False
+                    loaded = False
+
         if game_active and pause == False:
             draw_background()
-            score = display_score(start_time)
+            score = display_score()
             player.draw(screen)
             platforms_group.draw(screen)
             scroll = player.collisions()
@@ -442,6 +435,7 @@ if __name__ == "__main__":
             boosters.update()
             catch_pause()
         else:
+            start_time = int(pygame.time.get_ticks())
             for bullet in bullets:
                 bullet.kill()
             screen.blit(background, (0, 0))
@@ -455,18 +449,31 @@ if __name__ == "__main__":
                 # screen.blit(game_message_save, message_save)
                 screen.blit(game_message_pause, message_pause)
             else:
-                score_message = test_font.render('Your score: {}'.format(score), False, (0, 0, 0))
-                score_message_rect = score_message.get_rect(center=(200, 375))
-                screen.blit(score_message, score_message_rect)
-                save_message = test_font.render('Press s to save score', False, (0, 0, 0))
-                save_message_rect = save_message.get_rect(center=(200, 475))
-                screen.blit(save_message, save_message_rect)
-                catch_save()
-                if pause:
-                    pause_message = test_font.render('Press c to continue', False, (0, 0, 0))
-                    pause_message_rect = pause_message.get_rect(center=(200, 275))
-                    screen.blit(pause_message, pause_message_rect)
-                    catch_continue()
+                if loaded:
+                    score_message = test_font.render('Your score: {}'.format(score), False, (0, 0, 0))
+                    score_message_rect = score_message.get_rect(center=(200, 375))
+                    screen.blit(score_message, score_message_rect)
+                    loaded_message = test_font.render('Loaded. Press space to continue', False, (0, 0, 0))
+                    loaded_message_rect = loaded_message.get_rect(center=(200, 475))
+                    screen.blit(loaded_message, loaded_message_rect)
+                    # catch_continue()
+                else:
+                    score_message = test_font.render('Your score: {}'.format(score), False, (0, 0, 0))
+                    score_message_rect = score_message.get_rect(center=(200, 375))
+                    screen.blit(score_message, score_message_rect)
+                    save_message = test_font.render('Press s to save score', False, (0, 0, 0))
+                    save_message_rect = save_message.get_rect(center=(200, 475))
+                    screen.blit(save_message, save_message_rect)
+                    catch_save()
+                    if saved:
+                        saved_message = test_font.render('Saved. Press space to restart', False, (0, 0, 0))
+                        saved_message_rect = saved_message.get_rect(center=(200, 150))
+                        screen.blit(saved_message, saved_message_rect)
+                    if pause:
+                        pause_message = test_font.render('Press c to continue', False, (0, 0, 0))
+                        pause_message_rect = pause_message.get_rect(center=(200, 275))
+                        screen.blit(pause_message, pause_message_rect)
+                        catch_continue()
 
         pygame.display.update()
         clock.tick(60)
