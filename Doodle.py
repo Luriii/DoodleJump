@@ -240,7 +240,7 @@ def display_score():
     # player.score = int(pygame.time.get_ticks() / 1000) - start - stop_time
     player.score += player.collisions()
     score_surf = test_font.render('Score: {}'.format(player.score), False, (0, 0, 0))
-    score_rect = score_surf.get_rect(center=(350, 20))
+    score_rect = score_surf.get_rect(center=(320, 20))
     screen.blit(score_surf, score_rect)
     return player.score
 
@@ -273,7 +273,7 @@ def update_platforms():
             if i == rocket_index and type[i] == 0:
                 rocket_x = x[i]
                 rocket_y = y[i]
-                boosters.add(Boosters(rocket_x, rocket_y - 10))
+                boosters.add(Boosters(rocket_x, rocket_y - 20))
 
 
 def spawn_monsters():
@@ -432,7 +432,7 @@ if __name__ == "__main__":
                         if i == rocket_index and type[i] == 0:
                             rocket_x = x[i]
                             rocket_y = y[i]
-                            boosters.add(Boosters(rocket_x, rocket_y - 10))
+                            boosters.add(Boosters(rocket_x, rocket_y - 20))
                     # clock.tick(60)
                     game_active = True
                     saved = False
