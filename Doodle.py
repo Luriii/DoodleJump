@@ -105,13 +105,18 @@ class Player:
             if booster.rect.colliderect(self.rect.x, self.rect.y + dy, 60, 60):
                 with_rocket = pygame.image.load('with_rocket.png').convert_alpha()
                 self.image = pygame.transform.scale(with_rocket, (60, 60))
-                self.gravity -= 40
+                self.gravity -= 150
                 rocket_start = time.time()
                 self.rocket_sound.play()
                 booster.kill()
-                # check if there is enough fuel to fly
-        if time.time() - rocket_start > 5:
+        # check if there is enough fuel to fly
+        if time.time() - rocket_start > 4:
             self.image = self.player_pos[0]
+        # collision with monsters
+        global game_active
+        for monster in monsters:
+            if monster.rect.colliderect(self.rect.x, self.rect.y + dy, 50, 50):
+                game_active = False
         # return scroll variable to update screen
         return s
 
@@ -149,6 +154,14 @@ class Boosters(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
+
+    def move(self):
+        self.rect.y += scroll
+        if self.rect.y == 700:
+            self.kill()
+
+    def update(self):
+        self.move()
 
 
 class Platform(pygame.sprite.Sprite):
@@ -200,12 +213,16 @@ class Monster(pygame.sprite.Sprite):
                 self.kill()
 
     def move(self):
+        global scroll
         if self.pos_change < 40:
             self.rect.x += self.dx
             self.pos_change += 1
         else:
             self.dx = -self.dx
             self.pos_change = 0
+        self.rect.y += scroll
+        if self.rect.y == 700:
+            self.kill()
 
     def update(self):
         self.move()
@@ -239,7 +256,7 @@ def floor_collision():
 
 # updating platform group when the background moved up
 def update_platforms():
-    global platforms_group, platform_types, images
+    global platforms_group, platform_types, images, rocket_x, rocket_y
     for platform in platforms_group:
         if platform.rect.y >= 800:
             platform.kill()
@@ -247,11 +264,16 @@ def update_platforms():
         type = np.random.randint(0, 3, max_platforms)
         x = np.random.randint(0, 320, max_platforms)
         y = np.arange(-800, 0, 800 / max_platforms)
+        rocket_index = random.randint(max_platforms, 2 * max_platforms)
         for i in range(1, len(type) - 1):
             if type[i] == 2 and type[i] == type[i + 1] and type[i] == type[i - 1]:
                 type[i] = random.randint(0, 1)
         for i in range(len(type)):
             platforms_group.add(Platform(x[i], y[i], images[type[i]], platform_types[type[i]]))
+            if i == rocket_index and type[i] == 0:
+                rocket_x = x[i]
+                rocket_y = y[i]
+                boosters.add(Boosters(rocket_x, rocket_y - 10))
 
 
 def spawn_monsters():
@@ -393,7 +415,7 @@ if __name__ == "__main__":
                         start_time = int(pygame.time.get_ticks() / 1000)
                     platforms_characteritics = []
                     platforms_group = pygame.sprite.Group()
-                    rocket_index = random.randint(0, max_platforms)
+                    rocket_index = random.randint(max_platforms, 2*max_platforms)
 
                     type = np.random.randint(0, 3, 2 * max_platforms)
                     x = np.random.randint(0, 320, 2 * max_platforms)
@@ -410,6 +432,7 @@ if __name__ == "__main__":
                         if i == rocket_index and type[i] == 0:
                             rocket_x = x[i]
                             rocket_y = y[i]
+                            boosters.add(Boosters(rocket_x, rocket_y - 10))
                     # clock.tick(60)
                     game_active = True
                     saved = False
@@ -438,6 +461,10 @@ if __name__ == "__main__":
             start_time = int(pygame.time.get_ticks())
             for bullet in bullets:
                 bullet.kill()
+            for booster in boosters:
+                booster.kill()
+            for monster in monsters:
+                monster.kill()
             screen.blit(background, (0, 0))
             screen.blit(doodle, doodle_rect)
             if score == 0:
@@ -446,7 +473,6 @@ if __name__ == "__main__":
                 screen.blit(game_message_left, message_left)
                 screen.blit(game_message_right, message_right)
                 screen.blit(game_message_load, message_load)
-                # screen.blit(game_message_save, message_save)
                 screen.blit(game_message_pause, message_pause)
             else:
                 if loaded:
